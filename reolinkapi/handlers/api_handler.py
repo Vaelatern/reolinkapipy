@@ -55,7 +55,19 @@ class APIHandler(AlarmAPIMixin,
         self.token = None
         self.username = username
         self.password = password
-        Request.proxies = kwargs.get("proxy")  # Defaults to None if key isn't found
+        Request.kwargs = kwargs
+
+    def use_default_certificate(self):
+        """
+        Use a certificate retrieved from a reolink 810A camera on 2022-11-10
+        as the default certificate. Call this to trust a possibly weak
+        certificate, but it might be better than setting verify=False
+        """
+        import os
+        import inspect
+        my_path = inspect.getfile(APIHandler)
+        combined_path = os.path.join(my_path, "..", "..", "assets", "reolink-camera-default-certificate.crt")
+        Request.kwargs["verify"] = combined_path
 
     def login(self) -> bool:
         """
@@ -125,7 +137,7 @@ class APIHandler(AlarmAPIMixin,
                 tgt_filepath = data[0].pop('filepath')
                 # Apply the data to the params
                 params.update(data[0])
-                with requests.get(self.url, params=params, stream=True, verify=False, timeout=(1, None), proxies=Request.proxies) as req:
+                with requests.get(self.url, params=params, stream=True, verify=False, timeout=(1, None), **Request.kwargs) as req:
                     if req.status_code == 200:
                         with open(tgt_filepath, 'wb') as f:
                             f.write(req.content)
